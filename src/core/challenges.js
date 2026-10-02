@@ -28,6 +28,8 @@ const CH=[
 {id:'Squares up to 100',I:'',O:'L',src:'10 range sq',t:[[[],[1,4,9,16,25,36,49,64,81,100]]]},
 {id:'Is perfect square',I:'I',O:'I',src:'issq',t:[[0,1],[1,1],[16,1],[15,0],[2,0],[1000000,1],[999999,0],[-4,0]]},
 {id:'nth number with n distinct prime factors',I:'I',O:'I',src:'2 {x pfac uniq len n = }firstn last',t:[[1,2],[2,10],[3,60],[4,420]]},
+{id:'Concatenate numbers (fold)',I:'L',O:'S',src:'"" {a str cat }fold',t:[[[1,22,3],'1223'],[[],''],[[0,5],'05']]},
+{id:'Product, empty is 1 (fold)',I:'L',O:'I',src:'1 {a * }fold',t:[[[2,3,4],24],[[],1]]},
 {id:'Pangram',I:'S',O:'I',src:'drop alpha { n low swap has } map all',t:[['The quick brown fox jumps over the lazy dog',1],['hello',0]]},
 // --- Code Golf SE sample: challenges with Jelly, Vyxal and Thunno 2 answers ---
 {id:'Primes in range (CGCC 258217)',best:4,I:'II',O:'L',src:'rng tail init { prime } filter',t:[[[11,59],[13,17,19,23,29,31,37,41,43,47,53]],[[11,3],[7,5]],[[2,2],[]],[[2,3],[]],[[2,4],[3]],[[4,2],[3]]]},

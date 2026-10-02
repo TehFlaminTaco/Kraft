@@ -17,7 +17,7 @@ const kindOf=t=>t[0]=='#'?t.slice(0,2):t;
 function compile(src,I,O){let st=st0(I);const steps=[],costs=[],toks=[];
  try{const m=lex(src);
   for(const t of m){const kind=litKind(t)||t,o=opts(st,I,O,toks.length>=LIM),i=o.findIndex(x=>x[0]==kind);
-   if(i<0){const known=NAMES.includes(t)||/^(\{[2x]?|\}\w+)$/.test(t)||kind[0]=='#';const v=o.map(x=>x[0]);
+   if(i<0){const known=NAMES.includes(t)||/^(\{[2xa]?|\}\w+)$/.test(t)||kind[0]=='#';const v=o.map(x=>x[0]);
     return{err:`'${t}' is not valid here (stack [${st.f.at(-1)}]${st.bs.length?' inside a block':''}${known?'':', unknown token'}). Valid: ${v.slice(0,60).join(' ')}${v.length>60?' …':''}`}}
    const s0=steps.length;{const wt=wtabOf(o);steps.push([wt.M,wt.W[i],wt.C[i]])}let tok=t;
    if(kind[0]=='#'){const v=kind=='#I'?nrm(BigInt(t)):pj(t);encLit(kind,v,steps);tok=kind+(kind=='#I'?String(v):fmt(v))}
@@ -46,6 +46,7 @@ function ev(p,s,args){for(const nd of p){tick();
   if(k=='first'){let x=s.pop();while(!truthy(f([x])))x=ar('+',x,1);s.push(x)}
   else if(k=='fix'){let x=s.pop();for(;;){const y=f([x]);if(key(y)==key(x))break;x=y}s.push(x)}
   else if(k=='trace'){let x=s.pop();const out=[x],seen=new Set([key(x)]);for(;;){const y=f([x]),ky=key(y);if(seen.has(ky))break;seen.add(ky);out.push(y);x=y}s.push(chk(out))}
+  else if(k=='fold'||k=='folds'){let acc=s.pop();const a=A(s.pop()),out=[];for(const x of a){acc=f([acc,x]);if(k=='folds')out.push(acc)}s.push(k=='fold'?acc:chk(out))}
   else if(k=='firstn'){let x=s.pop();const n=num(s.pop()),out=[];while(out.length<n){if(truthy(f([x])))out.push(x);x=ar('+',x,1)}s.push(chk(out))}
   else if(k=='times'){let x=s.pop();const n=num(s.pop());for(let i=0;i<n;i++)x=f([x]);s.push(x)}
   else{const a=A(s.pop());

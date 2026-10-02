@@ -10,11 +10,13 @@ function opts0(st,I,O,full){const ck=st.f.join('|')+'/'+st.bs.join('|')+'/'+st.p
  if(Fr.length>1&&c.length==1){const b=B.at(-1),C=b[0],md=b[1],o=Fr.at(-2),rest=Fr.slice(0,-2),bs=B.slice(0,-1),R=c,cl=(k,res,outer)=>r.push(['}'+k,nw([...rest,outer??o.slice(0,-1)+res],'}',bs),{k,C,r:R}]);
   if(md=='1'){if('ILS'.includes(R))cl('map',C=='S'&&R=='S'?'S':LIST[R]);if(R=='I'){cl('filter',C);cl('sortby',C);cl('find',ELEM[C]);cl('count','I')}}
   else if(md=='2'){if(R==ELEM[C]){cl('reduce',R);if(C!='S')cl('scan',C)}}
+  else if(md=='a'){if(R==o.at(-1)){cl('fold',null,o.slice(0,-2)+R);if('ILS'.includes(R))cl('folds',null,o.slice(0,-2)+LIST[R])}}
   else{const t=C;if(t=='I'&&R=='I'){cl('first','I');if(o.length>=2&&o.at(-2)=='I')cl('firstn',null,o.slice(0,-2)+'L')}if(R==t){cl('fix',t);if('ILS'.includes(t))cl('trace',LIST[t]);if(o.length>=2&&o.at(-2)=='I')cl('times',null,o.slice(0,-2)+t)}}}
  if(!full){
   if(Fr.length<3&&c.length){const top=c.at(-1);
    if(CONT.includes(top)){const E=ELEM[top];r.push(['{',nw([...Fr,E],'{',[...B,top+'1']),null]);r.push(['{2',nw([...Fr,E+E],'{',[...B,top+'2']),null])}
-   r.push(['{x',nw([...Fr,top],'{',[...B,top+'x']),null])}
+   r.push(['{x',nw([...Fr,top],'{',[...B,top+'x']),null]);
+   if(c.length>=2&&CONT.includes(c.at(-2))){const L=c.at(-2);r.push(['{a',nw([...Fr,top+ELEM[L]],'{',[...B,L+'a']),null])}}
   for(const t of NAMES){const AI={n:1,m:2,k:3}[t];if(AI&&I.length<AI)continue;if(BAN[st.p]&&BAN[st.p].has(t))continue;
    const sigs=AI?[['',I.at(-AI)]]:SG(t);
    for(let si=0;si<sigs.length;si++){const[i,o]=sigs[si];if(c.length<i.length)continue;const top=c.slice(c.length-i.length),b={};let ok=1;
@@ -34,6 +36,7 @@ function DD(Fr,B,O){const k=Fr.join('|')+'/'+B.join('|')+'/'+O;if(k in DM)return
   const tc=(r,res,outer)=>{const a=h1(c,r);if(a>=1e9)return;v=Math.min(v,a+1+DD([...rest,outer??o.slice(0,-1)+res],bs,O))};
   if(md=='1'){for(const r of'ILS')tc(r,C=='S'&&r=='S'?'S':LIST[r]);tc('I',C);tc('I',ELEM[C]);tc('I','I')}
   else if(md=='2'){tc(ELEM[C],ELEM[C]);if(C!='S')tc(ELEM[C],C)}
+  else if(md=='a'){const T=o.at(-1);tc(T,null,o.slice(0,-2)+T);if('ILS'.includes(T))tc(T,null,o.slice(0,-2)+LIST[T])}
   else{const t=C;if(t=='I'){tc('I','I');if(o.length>=2&&o.at(-2)=='I')tc('I',null,o.slice(0,-2)+'L')}tc(t,t);if('ILS'.includes(t))tc(t,LIST[t]);if(o.length>=2&&o.at(-2)=='I')tc(t,null,o.slice(0,-2)+t)}}
  return DM[k]=v}
 function opts(st,I,O,full){const ck=st.f.join('|')+'/'+st.bs.join('|')+'/'+st.p+'/'+I+'/'+O+'/'+(full?1:0);let r=OS.get(ck);if(r)return r;
