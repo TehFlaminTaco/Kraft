@@ -1,7 +1,11 @@
 import './style.css';
+import {cgcc,cmc,permalink,parseHash} from './answer.js';
 import {CH,SG,T,compile,decode,exec,extraTests,fmt,makeSearch,okv,pj,runAll,runv,show} from '../core/index.js';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+// copy-ready answers: the last compiled program in each pane
+const ANS={};
+const copyBar=p=>`<p class=copy><button data-copy=cgcc data-pane=${p}>Copy CGCC answer</button> <button data-copy=cmc data-pane=${p}>Copy for chat</button> <small class=cs></small></p>`;
 $('ch').innerHTML=CH.map((c,i)=>`<option value=${i}>${c.id}</option>`).join('');
 function load(i){tab(0);$('ch').value=i;const c=CH[i];$('src').value=c.src;$('sig').textContent=`${c.I} → ${c.O}`;go()}
 function go(){const c=CH[$('ch').value],r=compile($('src').value,c.I,c.O);
@@ -9,7 +13,8 @@ function go(){const c=CH[$('ch').value],r=compile($('src').value,c.I,c.O);
  const d=decode(r.bytes,c.I,c.O);let pass=0,det=[];
  for(const[i,o]of c.t){let v;try{v=runv(d,c.I,i)}catch(e){v='error'}const ok=fmt(v)==fmt(o);pass+=ok;det.push(`${fmt(i)}→${fmt(v)}${ok?'':' (want '+fmt(o)+')'}`)}
  $('out').innerHTML=r.costs.map(x=>`<span class=tok>${esc(x[0])} <b>${x[1].toFixed(2)}b</b></span>`).join('')+
- `<p><b style="color:var(--fg)">${r.bytes.length} bytes</b> (${r.bits.toFixed(1)} bits): <code>${r.bytes.map(b=>b.toString(16).padStart(2,'0')).join(' ')||'(empty)'}</code><br>Decoded back: <code>${esc((d||[]).map(show).join(' '))}</code><br>Tests ${pass}/${c.t.length}: <small>${esc(det.join('; '))}</small></p>`}
+ `<p><b style="color:var(--fg)">${r.bytes.length} bytes</b> (${r.bits.toFixed(1)} bits): <code>${r.bytes.map(b=>b.toString(16).padStart(2,'0')).join(' ')||'(empty)'}</code><br>Decoded back: <code>${esc((d||[]).map(show).join(' '))}</code><br>Tests ${pass}/${c.t.length}: <small>${esc(det.join('; '))}</small></p>`+copyBar('ch');
+ ANS.ch={src:(d||[]).map(show).join(' '),bytes:r.bytes,I:c.I,O:c.O,inputs:c.t.map(([i])=>fmt(i))}}
 const tab=d=>{if(!d&&!suiteDone){$('tb').innerHTML='<tr><td>Running suite…</tr>';setTimeout(suite,30)}$('pdev').hidden=!d;$('pch').hidden=d;$('tdev').className=d?'on':'';$('tch').className=d?'':'on'};$('tdev').onclick=()=>tab(1);$('tch').onclick=()=>tab(0);
 let SR=null;
 $('gs').onclick=()=>{if(SR){SR.stop=1;return}
@@ -38,9 +43,9 @@ function dev(fromHex){const I=$('dI').value.trim().toUpperCase(),O=$('dO').value
   $('dsrc').value=toks.map(show).join(' ');info=`Decoded ${bytes.length} bytes to source above.`}
  else{const r=compile($('dsrc').value,I,O);if(r.err){$('dout').innerHTML=`<span class=err>${esc(r.err)}</span>`;return}
   toks=r.toks;bytes=r.bytes;$('dhex').value=hexOf(bytes);info=`${bytes.length} bytes (${r.bits.toFixed(1)} bits).`}
- try{location.hash=`${I}/${O}/${bytes.map(x=>x.toString(16).padStart(2,'0')).join('')}`}catch(e){}
- const lines=$('din').value.split('\n').map(x=>x.trim()).filter(x=>x);
- $('dout').innerHTML=`<p style="margin:0 0 6px">${info} <small>Bytecode is stored in the URL fragment, so the link is shareable.</small></p>`+(lines.length?runLines(toks,I,lines):'<small>Add inputs above to run the program.</small>')}
+ const lines=$('din').value.split('\n').map(x=>x.trim()).filter(x=>x);ANS.dev={src:toks.map(show).join(' '),bytes,I,O,inputs:lines};
+ try{history.replaceState(null,'',permalink('',I,O,bytes,lines))}catch(e){}
+ $('dout').innerHTML=`<p style="margin:0 0 6px">${info} <small>Bytecode is stored in the URL fragment, so the link is shareable.</small></p>`+(lines.length?runLines(toks,I,lines):'<small>Add inputs above to run the program.</small>')+copyBar('dev')}
 $('dgo').onclick=()=>dev(false);
 document.addEventListener('keydown',e=>{if(e.key!='Enter'||!(e.ctrlKey||e.metaKey))return;const id=e.target.id;let f=null;
  if(id=='dhex')f=()=>dev(true);else if(['dsrc','din','dI','dO'].includes(id))f=()=>dev(false);else if(id=='src')f=go;
@@ -80,4 +85,9 @@ const RF=[['n','∅ → argument'],['m','∅ → argument'],['k','∅ → argume
 $('ref').innerHTML='<tr><th>Token<th>Types (I number · S string · L list · M list of lists · W list of strings)<th>What it does</tr>'+RF.map(([k,e])=>`<tr><td><a href="#" data-t="${esc(k)}" style="color:var(--ac)">${esc(k)}</a><td style="white-space:normal;font-size:12px">${esc(e)}<td style="white-space:normal">${esc(DOC[k]||'')}`).join('');
 $('ref').onclick=e=>{const t=e.target.dataset?.t;if(!t)return;e.preventDefault();const a=$('dsrc');a.value=(a.value.trim()+' '+t).trim();a.focus()};
 $('ch').value=6;$('src').value=CH[6].src;$('sig').textContent='I → I';go();tab(1);
-const m=/^#([ILSMW]{1,4})\/([ILSMW]{1,4}|\*)\/([0-9a-f]*)$/.exec(location.hash)||/^#([IL])([IL*])\.([0-9a-f]*)$/.exec(location.hash);if(m){$('dI').value=m[1];$('dO').value=m[2];$('dhex').value=m[3];dev(true)}
+const m=parseHash(location.hash);if(m){$('dI').value=m.I;$('dO').value=m.O;$('dhex').value=m.hex;if(m.inputs!=null)$('din').value=m.inputs;dev(true)}
+// copy a program as a Code Golf SE answer or a chat (CMC) one-liner
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy]');if(!b)return;const a=ANS[b.dataset.pane];if(!a)return;
+ const link=permalink(location.origin+location.pathname,a.I,a.O,a.bytes,a.inputs),text=(b.dataset.copy=='cgcc'?cgcc:cmc)({...a,link}),st=b.parentNode.querySelector('.cs');
+ try{await navigator.clipboard.writeText(text);st.textContent=b.dataset.copy=='cgcc'?'Copied the CGCC answer.':'Copied the chat message.'}
+ catch(err){st.textContent='Clipboard unavailable; copy it from here:';const t=document.createElement('textarea');t.value=text;t.readOnly=true;st.append(t);t.select()}});

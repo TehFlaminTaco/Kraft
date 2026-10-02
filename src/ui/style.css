@@ -21,3 +21,4 @@ tr.r{cursor:pointer}.tabs{margin:8px 0}.tabs button.on{background:var(--ac);colo
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 4px}.top h1{margin:0}
 button.ai{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 10px 3px 8px;border-radius:999px;color:var(--ac);border-color:var(--bd)}
 button.ai:hover{border-color:var(--ac)}
+.copy{margin:10px 0 0}.copy .cs textarea{margin-top:6px;height:120px}
