@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CGCC sampler: Jelly / Vyxal / Thunno 2</title>
+<style>
+:root{--bg:#fafaf7;--fg:#1d1d1b;--mut:#6b6b66;--ac:#0b6b5c;--bd:#d9d8d0;--bad:#b3261e}
+@media(prefers-color-scheme:dark){:root{--bg:#161615;--fg:#ecebe5;--mut:#9a9a92;--ac:#4cc3ad;--bd:#33332f;--bad:#f2837c}}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif;max-width:900px;margin:auto;padding:16px}
+h1{font-size:20px;margin:0 0 4px}p,small{color:var(--mut)}
+input,button,textarea{background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:6px;padding:7px 9px;font:14px ui-monospace,Menlo,Consolas,monospace}
+input{width:7em}button{cursor:pointer;color:var(--ac);border-color:var(--ac)}button:disabled{opacity:.5;cursor:default}
+textarea{width:100%;box-sizing:border-box;height:340px}#log{white-space:pre-wrap;font:13px ui-monospace,Menlo,monospace;color:var(--mut);max-height:160px;overflow:auto}
+.err{color:var(--bad)}label{margin-right:12px}
+</style></head><body>
+<h1>Code Golf SE sampler</h1>
+<p>Finds code-golf challenges that have Jelly, Vyxal <i>and</i> Thunno 2 answers, and collects each language's shortest answer plus the challenge text. Open this file locally in your browser; it calls the public Stack Exchange API (about 20 requests of the 300/day anonymous quota).</p>
+<p><label>Challenges <input id="n" type="number" value="40" min="1" max="200"></label>
+<label>Seed <input id="seed" type="number" value="1"></label>
+<label>API key (optional) <input id="key" style="width:12em" placeholder="none"></label></p>
+<p><button id="go">Run</button> <button id="copy" disabled>Copy JSON</button> <button id="dl" disabled>Download JSON</button> <small id="status"></small></p>
+<div id="log"></div>
+<textarea id="out" spellcheck="false" placeholder="Results appear here"></textarea>
+<script>
+const API='https://api.stackexchange.com/2.3',SITE='codegolf';
+const $=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const log=(m,cls)=>{const d=document.createElement('div');d.textContent=m;if(cls)d.className=cls;$('log').append(d);$('log').scrollTop=1e9};
+let KEY='';
+async function get(path){
+  const r=await fetch(`${API}${path}${path.includes('?')?'&':'?'}site=${SITE}${KEY}`);
+  const j=await r.json();
+  if(j.error_id)throw new Error(`${j.error_id} ${j.error_name}: ${j.error_message}`);
+  if(j.quota_remaining!=null)$('status').textContent=`API quota left: ${j.quota_remaining}`;
+  if(j.backoff){log(`API asked to back off ${j.backoff}s`);await sleep(j.backoff*1000)}
+  await sleep(150);return j}
+async function getAll(path,maxPages=10){let items=[];
+  for(let page=1;page<=maxPages;page++){const j=await get(`${path}&pagesize=100&page=${page}`);items=items.concat(j.items);if(!j.has_more)break}
+  return items}
+const unesc = s => s.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+function parseAnswer(html) {
+  const h = html.match(/<h[1-4][^>]*>([\s\S]*?)<\/h[1-4]>/);
+  if (!h) return null;
+  const header = unesc(h[1]).trim();
+  // last "N byte(s)" in the header is the current score (earlier ones are usually struck out)
+  const nums = [...header.matchAll(/(\d+(?:\.\d+)?)\s*(?:bytes?|bits?)/gi)];
+  const bytes = nums.length ? +nums[nums.length - 1][1] : null;
+  let lang = null;
+  if (/thunno\s*2/i.test(header)) lang = 'Thunno 2';
+  else if (/vyxal/i.test(header)) lang = 'Vyxal';
+  else if (/\bjelly\b/i.test(header)) lang = 'Jelly';
+  const code = html.match(/<pre[^>]*><code>([\s\S]*?)<\/code><\/pre>/);
+  return { lang, bytes, header, code: code ? unesc(code[1]).replace(/\n$/, '') : null };
+}
+
+// small seeded shuffle so runs are reproducible
+function shuffle(a, seed) {
+  let s = seed;
+  const rnd = () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+
+async function run(){
+  const SAMPLE=+$('n').value||40,SEED=+$('seed').value||1;KEY=$('key').value.trim()?`&key=${encodeURIComponent($('key').value.trim())}`:'';
+  $('log').textContent='';$('out').value='';$('go').disabled=$('copy').disabled=$('dl').disabled=true;
+  try{
+    log('Searching for Thunno 2 answers…');
+    const exc=await getAll(`/search/excerpts?order=desc&sort=creation&q=${encodeURIComponent('"Thunno 2"')}`,5);
+    const qids=shuffle([...new Set(exc.filter(x=>x.item_type==='answer').map(x=>x.question_id))],SEED);
+    log(`Found ${qids.length} questions with Thunno 2 answers`);
+    const out=[];
+    for(let i=0;i<qids.length&&out.length<SAMPLE;i+=50){
+      const batch=qids.slice(i,i+50);
+      log(`Fetching batch ${i/50+1}: ${batch.length} questions and their answers…`);
+      const qs=await getAll(`/questions/${batch.join(';')}?filter=withbody`,1);
+      const ans=await getAll(`/questions/${batch.join(';')}/answers?filter=withbody`,15);
+      for(const q of qs){
+        if(!q.tags.includes('code-golf'))continue;
+        const best={};
+        for(const a of ans.filter(a=>a.question_id===q.question_id)){
+          const p=parseAnswer(a.body);
+          if(!p||!p.lang||p.bytes==null)continue;
+          if(!best[p.lang]||p.bytes<best[p.lang].bytes)best[p.lang]={bytes:p.bytes,header:p.header,code:p.code?.slice(0,300),answer_id:a.answer_id};
+        }
+        if(!(best.Jelly&&best.Vyxal&&best['Thunno 2']))continue;
+        out.push({id:q.question_id,title:unesc(q.title),link:q.link,tags:q.tags.filter(t=>t!=='code-golf'),body:unesc(q.body).replace(/\n{3,}/g,'\n\n').slice(0,1500),best});
+        if(out.length>=SAMPLE)break;
+      }
+      log(`  kept ${out.length} so far`);
+    }
+    $('out').value=JSON.stringify(out,null,1);
+    log(`Done: ${out.length} challenges with all three languages (${Math.round($('out').value.length/1024)} KB)`);
+    $('copy').disabled=$('dl').disabled=!out.length;
+  }catch(e){log('Error: '+e.message,'err')}
+  $('go').disabled=false}
+$('go').onclick=run;
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('out').value);log('Copied to clipboard')}catch(e){$('out').select();document.execCommand('copy');log('Copied (fallback)')}};
+$('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('out').value],{type:'application/json'}));a.download=`cgcc_sample_seed${$('seed').value}.json`;a.click()};
+</script></body></html>

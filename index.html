@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kraft: a type-pruned golf encoding</title>
+<link rel="icon" type="image/svg+xml" href="./src/ui/favicon.svg">
+</head><body>
+<header class="top"><h1>Kraft <small id="ver"></small></h1>
+<button class="ai" popovertarget="aiinfo" title="Built with AI" aria-label="About AI use in this project"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M10 2.5c.6 3.9 2.6 5.9 6.5 6.5-3.9.6-5.9 2.6-6.5 6.5-.6-3.9-2.6-5.9-6.5-6.5 3.9-.6 5.9-2.6 6.5-6.5zM18 13c.35 2.2 1.3 3.15 3.5 3.5-2.2.35-3.15 1.3-3.5 3.5-.35-2.2-1.3-3.15-3.5-3.5 2.2-.35 3.15-1.3 3.5-3.5z"/></svg>AI</button></header>
+<div id="aiinfo" popover role="note">
+<b>Built predominantly with AI</b>
+<p>Both the Kraft language and this site were designed and written mostly by an AI model (Anthropic's Claude), directed and reviewed by a human author. That covers the type system, encoding scheme, builtins, program search, challenge suite and benchmark numbers, as well as the page's UI.</p>
+<button popovertarget="aiinfo" popovertargetaction="hide">Close</button>
+</div>
+<p>Exact big integers, compressed literals, dictionary-coded strings, and a built-in program search. Source is typed and human-friendly (Dev tab). The compiler type-checks it, then emits a number in mixed radix: each token costs log2(k) bits, where k is how many tokens are <i>valid</i> in that state. Ill-typed and banned-redundant tokens take no code space. The decoder re-runs the same type rules, so every bytestring decodes.</p>
+<div class="tabs"><button id="tdev" class="on">Dev</button> <button id="tch">Challenges</button></div>
+<div id="pdev">
+<div class="box"><b>Write &amp; run</b> <small>your own programs, inputs and raw bytecode</small>
+<p style="margin:6px 0">Input stack → output stack: <input id="dI" value="I" size="7" spellcheck="false"> → <input id="dO" value="I" size="7" spellcheck="false"> <br><small>Each is a stack shape, bottom → top, using I (number), S (string), L (list of numbers), M (list of lists) and W (list of strings), up to 4 deep. <code>IL</code> = two arguments, a list on top of an integer. Output <code>*</code> = any single value.</small></p>
+<textarea id="dsrc" spellcheck="false" placeholder="source, e.g.  range { dup * } map sum"></textarea>
+<textarea id="din" spellcheck="false" placeholder="inputs, one JSON value per line, e.g.&#10;5&#10;[3,1,2]"></textarea>
+<button id="dgo" title="Ctrl+Enter">Compile &amp; run</button> <small>Ctrl+Enter (⌘+Enter on Mac) runs from any box</small>
+<textarea id="dhex" spellcheck="false" style="margin-top:8px" placeholder="raw bytecode in hex, e.g. 1a 2b (any bytes decode)"></textarea>
+<button id="dhx">Decode bytes &amp; run</button>
+<div id="dout" style="margin-top:10px"></div></div>
+<div class="box w"><b>Function reference</b> <small>(stack effect: inputs → outputs, top of stack on the right; click a name to append it to the dev source)</small><table id="ref"></table></div>
+</div>
+<div id="pch" hidden>
+<p>Reference solutions to classic golf challenges, compared against a flat one-byte-per-token encoding.</p>
+<div class="box">
+<select id="ch"></select> <small id="sig"></small>
+<textarea id="src" spellcheck="false"></textarea>
+<button id="go">Compile &amp; run</button>
+<div id="out" style="margin-top:10px"></div>
+<p style="margin:8px 0 0"><button id="gs">Search for a shorter program</button> <small id="gss">Best-first search over typed programs, checked against the tests plus extra inputs labelled by the reference program.</small></p>
+</div>
+<div class="box w"><b>Suite</b> <small>(flat = tokens as 1 byte each in an untyped codepage; dead% = random 1-3 byte strings that never terminate; distinct = behaviours per valid sample, lower means more many-to-one)</small>
+<table id="tb"></table></div>
+</div>
+<script type="module" src="./src/ui/main.js"></script>
+<p><small>String literals can use the 4,096 most frequent English words from <a href="https://github.com/rspeer/wordfreq" style="color:var(--ac)">wordfreq</a> by Robyn Speer (word data CC BY-SA 4.0).</small></p></body></html>

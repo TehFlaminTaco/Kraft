@@ -1,0 +1,17 @@
+{
+  "name": "kraft",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Kraft: a golfing language designed as a compression scheme over typed programs",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/build.mjs",
+    "release": "node scripts/release.mjs",
+    "test": "node test/suite.mjs"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}
