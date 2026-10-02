@@ -19,7 +19,7 @@ assert.deepEqual(parseHash('#/S/0e'), {I: '', O: 'S', hex: '0e', inputs: null});
 const r = compile('range sq sum', 'I', 'I'), src = 'range sq sum', l = permalink(page, 'I', 'I', r.bytes, ['3']);
 assert.equal(cgcc({src, bytes: r.bytes, link: l}), [
   `# [Kraft](${REPO}), 2 bytes.`, '', '    range sq sum', '', '## Hex Dump', '', `    ${xxd(r.bytes)}`, '', `[Try it Online](${l})`].join('\n'));
-assert.equal(cmc({src, bytes: r.bytes, link: l}), `[Kraft](${REPO}), 2 bytes. [\`range sq sum\`](${l}) (Hex: \`0e 0b\`)`);
+assert.equal(cmc({src, bytes: r.bytes, link: l}), `[Kraft](${REPO}), 2 bytes. [\`range sq sum\`](${l}) (Hex: \`${r.bytes.map(x => x.toString(16).padStart(2, '0')).join(' ')}\`)`);
 assert.equal(cmc({src: 'a`b', bytes: [1], link: l}), `[Kraft](${REPO}), 1 byte. [Try it Online!](${l})`);
 assert.equal(cmc({src: '[1,2] sum', bytes: [1], link: l}), `[Kraft](${REPO}), 1 byte. [\`[1,2] sum\`](${l}) (Hex: \`01\`)`);
 assert.ok(cmc({src: 'x '.repeat(300), bytes: [1], link: l}).endsWith('[Try it Online!](' + l + ')'));

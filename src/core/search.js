@@ -1,5 +1,6 @@
 import {fmt,nrm,pj,setBudget} from './runtime.js';
 import {DD,opts,st0} from './types.js';
+import {wtabOf} from './weights.js';
 import {WORDS} from './words.js';
 import {encI,sbits} from './coder.js';
 import {compile,ev,run,runv,same,show,tree} from './lang.js';
@@ -51,9 +52,9 @@ function makeSearch(I,O,allTests,{maxTok=9,maxInner=3,lits=SLITS,H=2}={}){
  S.step=ms=>{const t0=Date.now();DL=t0+ms;
   while(heap.size&&Date.now()-t0<ms){const nd=heap.pop();
    if(S.best&&nd.bits>=S.best.bytes*8+8)continue;
-   try{const o=opts(nd.st,I,O,false),k=o.length;if(!k)continue;const b0=nd.bits+Math.log2(k),inB=nd.st.bs.length>0;
+   try{const o=opts(nd.st,I,O,false);if(!o.length)continue;const WT=wtabOf(o),inB=nd.st.bs.length>0;
     if(!inB&&nd.toks.length>=maxTok)continue;S.expanded++;
-    for(const[t,st2,info]of o){if(t=='END')continue;
+    for(let oi=0;oi<o.length;oi++){const[t,st2,info]=o[oi];if(t=='END')continue;const b0=nd.bits+Math.log2(WT.M/WT.W[oi]);
      if(inB){if(t[0]=='{')continue;
       if(t[0]=='}'){const outs=run1(nd.base,[{b:tree(nd.body),info}]);push({bits:b0,toks:[...nd.toks,t],st:st2,outs});continue}
       if(nd.body.length>=maxInner)continue;

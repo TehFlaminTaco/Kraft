@@ -1,6 +1,7 @@
 import {A,ELEM,F,LIM,ar,chk,cmp,fmt,isInt,key,nrm,num,pj,setBudget,tick,truthy,zero} from './runtime.js';
 import {NAMES,SG} from './builtins.js';
 import {RW} from './rewrite.js';
+import {wtabOf} from './weights.js';
 import {opts,opts0,st0} from './types.js';
 import {decLit,encLit,mkdec,pack,sbits} from './coder.js';
 // ===== source <-> tokens =====
@@ -18,16 +19,16 @@ function compile(src,I,O){let st=st0(I);const steps=[],costs=[],toks=[];
   for(const t of m){const kind=litKind(t)||t,o=opts(st,I,O,toks.length>=LIM),i=o.findIndex(x=>x[0]==kind);
    if(i<0){const known=NAMES.includes(t)||/^(\{[2x]?|\}\w+)$/.test(t)||kind[0]=='#';const v=o.map(x=>x[0]);
     return{err:`'${t}' is not valid here (stack [${st.f.at(-1)}]${st.bs.length?' inside a block':''}${known?'':', unknown token'}). Valid: ${v.slice(0,60).join(' ')}${v.length>60?' …':''}`}}
-   const s0=steps.length;steps.push([o.length,1,i]);let tok=t;
+   const s0=steps.length;{const wt=wtabOf(o);steps.push([wt.M,wt.W[i],wt.C[i]])}let tok=t;
    if(kind[0]=='#'){const v=kind=='#I'?nrm(BigInt(t)):pj(t);encLit(kind,v,steps);tok=kind+(kind=='#I'?String(v):fmt(v))}
    toks.push(tok);costs.push([show(tok),steps.slice(s0).reduce((a,x)=>a+sbits(x),0)]);st=o[i][1]}}
  catch(e){return{err:e.message}}
  const o=opts(st,I,O,toks.length>=LIM);
  if(!o.length||o[0][0]!='END')return{err:`program ends with stack [${st.f.at(-1)}]${st.bs.length?' (unclosed block)':''}, need [${O}]`};
- steps.push([o.length,1,0]);return{toks,bytes:pack(steps),costs,bits:costs.reduce((a,c)=>a+c[1],0)}}
+ {const wt=wtabOf(o);steps.push([wt.M,wt.W[0],0])}return{toks,bytes:pack(steps),costs,bits:costs.reduce((a,c)=>a+c[1],0)}}
 function decode(bytes,I,O){try{return decode1(bytes,I,O)}catch(e){return null}}
 function decode1(bytes,I,O){let n=0n;for(const b of bytes)n=n*256n+BigInt(b);const d=mkdec(n);let st=st0(I);const out=[];
- for(let s=0;s<80;s++){const o=opts(st,I,O,out.length>=LIM);if(!o.length)return null;const i=d.u(o.length),t=o[i][0];if(t=='END')return out;
+ for(let s=0;s<80;s++){const o=opts(st,I,O,out.length>=LIM);if(!o.length)return null;const i=d.w(wtabOf(o)),t=o[i][0];if(t=='END')return out;
   if(t[0]=='#'){const v=decLit(t,d);out.push(t+(t=='#I'?String(v):fmt(v)))}else out.push(t);st=o[i][1]}
  return null}
 // ===== typed execution: replay the type rules to pick each overload =====
@@ -45,6 +46,7 @@ function ev(p,s,args){for(const nd of p){tick();
   if(k=='first'){let x=s.pop();while(!truthy(f([x])))x=ar('+',x,1);s.push(x)}
   else if(k=='fix'){let x=s.pop();for(;;){const y=f([x]);if(key(y)==key(x))break;x=y}s.push(x)}
   else if(k=='trace'){let x=s.pop();const out=[x],seen=new Set([key(x)]);for(;;){const y=f([x]),ky=key(y);if(seen.has(ky))break;seen.add(ky);out.push(y);x=y}s.push(chk(out))}
+  else if(k=='firstn'){let x=s.pop();const n=num(s.pop()),out=[];while(out.length<n){if(truthy(f([x])))out.push(x);x=ar('+',x,1)}s.push(chk(out))}
   else if(k=='times'){let x=s.pop();const n=num(s.pop());for(let i=0;i<n;i++)x=f([x]);s.push(x)}
   else{const a=A(s.pop());
    if(k=='map'){const res=a.map(x=>f([x]));s.push(C=='S'&&r=='S'?res.join(''):res)}

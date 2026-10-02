@@ -4,6 +4,7 @@ export * from './runtime.js';
 export * from './builtins.js';
 export * from './rewrite.js';
 export * from './types.js';
+export * from './weights.js';
 export * from './words.js';
 export * from './coder.js';
 export * from './lang.js';

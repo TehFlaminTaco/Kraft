@@ -1,5 +1,5 @@
 // Builtin token table T: name -> list of [input shape, output shape, implementation] overloads.
-import {A,CAP,CONT,ELEM,F,LIST,ar,base,bsqrt,chk,cmp,cost,fdiv,fmod,gcd,ipow,isB,isP,key,mn,mx,nrm,num,primesTo,seq,tick,truthy,ubase,zero,zipL} from './runtime.js';
+import {A,BI,CAP,CONT,ELEM,F,LIST,ar,base,bsqrt,chk,cmp,cost,fdiv,fmod,gcd,ipow,isB,isInt,isP,key,mn,mx,nrm,num,primesTo,seq,tick,truthy,ubase,zero,zipL} from './runtime.js';
 const T={};
 const add=(n,...sigs)=>{(T[n]||(T[n]=[])).push(...sigs)};
 const U=(n,f)=>add(n,['I','I',f],['L','L',a=>a.map(f)],['M','M',a=>a.map(r=>r.map(f))]);
@@ -13,10 +13,15 @@ for(const v of[0,1,2,10])add(String(v),['','I',()=>v]);
 B('+',(a,b)=>ar('+',a,b));B('-',(a,b)=>ar('-',a,b));B('*',(a,b)=>ar('*',a,b));B('/',fdiv);B('div',(a,b)=>{b=num(b);return b?num(a)/b:0});
 B('%',fmod);B('dvd',(a,b)=>b!=0&&fmod(a,b)==0?1:0);B('=',(a,b)=>+(a==b));B('<',(a,b)=>+(a<b));B('>',(a,b)=>+(a>b));
 B('min2',mn);B('max2',mx);B('gcd',gcd);B('pow',ipow);
+// bitwise on integers (non-integers are floored, non-finite values give 0)
+const bw=f=>(a,b)=>{const I=x=>isInt(x)?BI(x):Number.isFinite(x)?BigInt(Math.floor(x)):null,x=I(a),y=I(b);return x==null||y==null?0:nrm(f(x,y))};
+B('band',bw((x,y)=>x&y));B('bor',bw((x,y)=>x|y));B('bxor',bw((x,y)=>x^y));
 B('ncr',(n,k)=>{n=num(n);k=num(k);if(k<0||k>n)return 0;k=Math.min(k,n-k);cost(k);let r=1n;for(let i=1;i<=k;i++)r=r*BigInt(n-k+i)/BigInt(i);return nrm(r)});
 B('npr',(n,k)=>{n=num(n);k=num(k);if(k<0||k>n)return 0;cost(k);let r=1n;for(let i=0;i<k;i++){r*=BigInt(n-i);if(i%256==255)nrm(r)}return nrm(r)});
 U('inc',a=>ar('+',a,1));U('dec',a=>ar('-',a,1));U('even',a=>+(isB(a)?a%2n==0n:a%2==0));U('neg',a=>isB(a)?nrm(-a):-a);U('abs',a=>isB(a)?(a<0n?-a:a):Math.abs(a));
 U('sq',a=>ar('*',a,a));U('not',a=>+!truthy(a));U('sign',a=>a>0?1:a<0?-1:0);
+U('issq',a=>{if(isB(a))return +(a>=0n&&bsqrt(a)**2n==a);if(!Number.isInteger(a)||a<0)return 0;let r=Math.floor(Math.sqrt(a));while(r*r>a)r--;while((r+1)*(r+1)<=a)r++;return +(r*r==a)});
+U('dsum',a=>base(a,10).reduce((x,y)=>x+y,0));U('isint',a=>+isInt(a));U('frac',a=>isB(a)?0:a-Math.floor(a));
 U('isqrt',a=>isB(a)?nrm(bsqrt(a<0n?0n:a)):a<0?0:Math.floor(Math.sqrt(a)));U('sqrt',a=>Math.sqrt(num(a)));U('floor',a=>isB(a)?a:Math.floor(a));U('ceil',a=>isB(a)?a:Math.ceil(a));U('round',a=>isB(a)?a:Math.round(a));U('prime',isP);
 U('fact',n=>{n=num(n);if(n<0)return 0;if(n<=18){let r=1;for(let i=2;i<=n;i++)r*=i;return r}if(n>8000)throw Error('fact: n too large');cost(n*n/2e4);let r=1n;for(let i=2n;i<=BigInt(n);i++)r*=i;return r});
 U('fib',n=>{n=num(n);if(n<=78){let a=0,b=1;for(let i=0;i<n;i++)[a,b]=[b,a+b];return a}if(n>100000)throw Error('fib: n too large');cost(n*n/2e5);let a=0n,b=1n;for(let i=0;i<n;i++)[a,b]=[b,a+b];return a});
@@ -30,6 +35,7 @@ add('digits',['I','L',n=>base(n,10)],['L','M',l=>l.map(n=>base(n,10))]);add('und
 add('base',['II','L',base]);add('ubase',['LI','I',ubase]);
 const RW1=(n,f,z)=>add(n,['L','I',l=>l.length?f(l):z],['M','L',m=>m.map(l=>l.length?f(l):z)]);
 RW1('sum',l=>l.reduce((a,b)=>ar('+',a,b),0),0);RW1('prod',l=>l.reduce((a,b)=>ar('*',a,b),1),1);RW1('max',l=>l.reduce(mx),0);RW1('min',l=>l.reduce(mn),0);
+add('minmax',['L','L',l=>l.length?[l.reduce(mn),l.reduce(mx)]:[0,0]]);
 RW1('all',l=>+l.every(truthy),1);RW1('any',l=>+l.some(truthy),0);
 const cs=l=>{let a=0;return l.map(x=>a=ar('+',a,x))};add('cumsum',['L','L',cs],['M','M',m=>m.map(cs)]);
 const dl=l=>l.slice(1).map((x,i)=>ar('-',x,l[i]));add('deltas',['L','L',dl],['M','M',m=>m.map(dl)]);
@@ -42,6 +48,13 @@ G('uniq',CONT,'C','C',C=>v=>{cost(A(v).length/10);const s=new Set;return F(A(v).
 G('head',CONT,'C','E',C=>v=>{const a=A(v);return a.length?a[0]:zero(ELEM[C])});G('last',CONT,'C','E',C=>v=>{const a=A(v);return a.length?a[a.length-1]:zero(ELEM[C])});
 G('tail',CONT,'C','C',C=>v=>F(A(v).slice(1),C));G('init',CONT,'C','C',C=>v=>F(A(v).slice(0,-1),C));
 G('cat',CONT,'CC','C',C=>(a,b)=>C=='S'?a+b:chk(a.concat(b)));
+G('pal',CONT,'C','I',C=>v=>{const a=A(v);cost(a.length/20);for(let i=0,j=a.length-1;i<j;i++,j--)if(key(a[i])!=key(a[j]))return 0;return 1});
+G('sortd',CONT,'C','C',C=>v=>{cost(A(v).length/10);return F([...A(v)].sort(cmp).reverse(),C)});
+// multiset difference: each item of the second removes one matching item of the first
+G('mdiff',CONT,'CC','C',C=>(a,b)=>{cost((A(a).length+A(b).length)/10);const m=new Map;for(const x of A(b)){const k=key(x);m.set(k,(m.get(k)||0)+1)}return F(A(a).filter(x=>{const k=key(x),c=m.get(k);if(c){m.set(k,c-1);return false}return true}),C)});
+G('diff',CONT,'CC','C',C=>(a,b)=>{cost((A(a).length+A(b).length)/10);const s=new Set(A(b).map(key));return F(A(a).filter(x=>!s.has(key(x))),C)});
+G('inter',CONT,'CC','C',C=>(a,b)=>{cost((A(a).length+A(b).length)/10);const s=new Set(A(b).map(key));return F(A(a).filter(x=>s.has(key(x))),C)});
+G('pad','LS','CI','C',C=>(v,n)=>{const a=A(v);n=Math.floor(num(n));if(!(n>a.length))return v;if(n>CAP)throw Error('list longer than '+CAP);cost(n/20);return F(Array(n-a.length).fill(C=='S'?' ':0).concat(a),C)});
 G('take',CONT,'CI','C',C=>(v,n)=>F(A(v).slice(0,Math.max(0,num(n))),C));G('skip',CONT,'CI','C',C=>(v,n)=>F(A(v).slice(Math.max(0,num(n))),C));
 G('rotate',CONT,'CI','C',C=>(v,n)=>{n=num(n);const a=A(v);if(!a.length)return v;const k=((n%a.length)+a.length)%a.length;return F(a.slice(k).concat(a.slice(0,k)),C)});
 G('rep',CONT,'CI','C',C=>(v,n)=>{n=Math.max(0,Math.floor(num(n)));const a=A(v);if(a.length*n>CAP)throw Error('rep: too large');cost(a.length*n/20);return F(Array.from({length:n},()=>a).flat(),C)});

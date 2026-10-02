@@ -16,6 +16,7 @@ src/core/           language core (no DOM; runs in Node and the browser)
   builtins.js         builtin token table T (add / U / B / G helpers)
   rewrite.js          redundant-pair rewrites RW and the derived BAN set
   types.js            typed states: opts0 / opts, distance-to-END (h1, DD)
+  weights.js          prior token weights: common tokens cost fewer bits (a best guess, not fitted)
   words.js            4,096-word dictionary (wordfreq, CC BY-SA 4.0)
   coder.js            mixed radix + rANS literal coding, pack / mkdec
   lang.js             lexer, compile, decode, annotate / tree / ev, run
@@ -24,6 +25,8 @@ src/core/           language core (no DOM; runs in Node and the browser)
   search.js           best-first program search (makeSearch, golf, extraTests)
 src/ui/             page script and styles
 test/suite.mjs      suite runner (all pass + exact round-trip, dead%, distinct, CGCC totals)
+test/fuzz.mjs       random-bytestring fuzz (no hangs, crashes or undefined results)
+test/answer.mjs     CGCC / chat answer formats and permalinks
 scripts/            build and release
 tools/cgcc/         Code Golf SE sampler scripts used to build the benchmark
 docs/               built site (committed; one folder per version)
