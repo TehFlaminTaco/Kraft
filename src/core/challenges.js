@@ -30,6 +30,9 @@ const CH=[
 {id:'nth number with n distinct prime factors',I:'I',O:'I',src:'2 {x pfac uniq len n = }firstn last',t:[[1,2],[2,10],[3,60],[4,420]]},
 {id:'Concatenate numbers (fold)',I:'L',O:'S',src:'"" {a str cat }fold',t:[[[1,22,3],'1223'],[[],''],[[0,5],'05']]},
 {id:'Product, empty is 1 (fold)',I:'L',O:'I',src:'1 {a * }fold',t:[[[2,3,4],24],[[],1]]},
+{id:"Gijswijt's sequence, first n terms",I:'I',O:'S',src:'dec "1" {x dup suffixes { dup dup cat tail over idxof chunks len } map max str cat }times',t:[[1,'1'],[10,'1121122231'],[30,'112112223112112223211211222311']]},
+{id:'Number prefixes',I:'I',O:'L',src:'digits prefixes undig',t:[[1234,[1,12,123,1234]],[7,[7]]]},
+{id:'Count each substring (capture)',I:'SW',O:'L',src:'{c count } map',t:[[['banana',['a','an','n']],[3,2,2]]]},
 {id:'Pangram',I:'S',O:'I',src:'drop alpha { n low swap has } map all',t:[['The quick brown fox jumps over the lazy dog',1],['hello',0]]},
 // --- Code Golf SE sample: challenges with Jelly, Vyxal and Thunno 2 answers ---
 {id:'Primes in range (CGCC 258217)',best:4,I:'II',O:'L',src:'rng tail init { prime } filter',t:[[[11,59],[13,17,19,23,29,31,37,41,43,47,53]],[[11,3],[7,5]],[[2,2],[]],[[2,3],[]],[[2,4],[3]],[[4,2],[3]]]},

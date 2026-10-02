@@ -1,6 +1,6 @@
-import {A,ELEM,F,LIM,ar,chk,cmp,fmt,isInt,key,nrm,num,pj,setBudget,tick,truthy,zero} from './runtime.js';
+import {A,chkS,ELEM,F,LIM,ar,chk,cmp,fmt,isInt,key,nrm,num,pj,setBudget,tick,truthy,zero} from './runtime.js';
 import {NAMES,SG} from './builtins.js';
-import {RW} from './rewrite.js';
+import {rules} from './rewrite.js';
 import {wtabOf} from './weights.js';
 import {opts,opts0,st0} from './types.js';
 import {decLit,encLit,mkdec,pack,sbits} from './coder.js';
@@ -10,14 +10,17 @@ function litKind(t){if(/^\d+$/.test(t))return CONSTS.has(t)?null:'#I';if(t[0]=='
  if(!Array.isArray(v))throw Error('bad list literal '+t);if(v.every(x=>isInt(x)))return'#L';if(v.every(x=>Array.isArray(x)&&x.every(y=>isInt(y))))return'#M';if(v.every(x=>typeof x=='string'))return'#W';throw Error('list literals hold integers, lists of integers, or strings')}
 function lex(src){const ts=src.match(/"(?:[^"\\]|\\.)*"|\[(?:[^\[\]"]|"(?:[^"\\]|\\.)*"|\[[^\[\]]*\])*\]|\S+/g)||[],m=[];
  for(let i=0;i<ts.length;i++){const t=ts[i];if(t=='}'&&ts[i+1]){m.push('}'+ts[++i]);continue}if(/^-\d+$/.test(t)){m.push(t.slice(1),'neg');continue}m.push(t)}
- for(let ch=1;ch;){ch=0;for(let i=0;i+1<m.length;i++){const r=RW[m[i]+' '+m[i+1]];if(r){m.splice(i,2,...r);ch=1;break}}}
+ // rewrite redundant sequences (matched by token kind, longest first) until none is left
+ const RW=rules(),kd=m.map(t=>litKind(t)||t);
+ for(let ch=1,it=0;ch;){ch=0;if(++it>1e5)throw Error('rewrite rules do not terminate');
+  for(let i=0;i<m.length&&!ch;i++)for(const L of[3,2]){const w=kd.slice(i,i+L),r=i+L<=m.length&&RW[w.join(' ')];if(r){m.splice(i,L,...r.map(k=>k[0]=='#'?m[i+w.indexOf(k)]:k));kd.splice(i,L,...r);ch=1;break}}}
  return m}
 const show=t=>t[0]=='#'?t.slice(2):t.length>1&&t[0]=='}'?'} '+t.slice(1):t;
 const kindOf=t=>t[0]=='#'?t.slice(0,2):t;
 function compile(src,I,O){let st=st0(I);const steps=[],costs=[],toks=[];
  try{const m=lex(src);
   for(const t of m){const kind=litKind(t)||t,o=opts(st,I,O,toks.length>=LIM),i=o.findIndex(x=>x[0]==kind);
-   if(i<0){const known=NAMES.includes(t)||/^(\{[2xa]?|\}\w+)$/.test(t)||kind[0]=='#';const v=o.map(x=>x[0]);
+   if(i<0){const known=NAMES.includes(t)||/^(\{[2xac]?|\}\w+)$/.test(t)||kind[0]=='#';const v=o.map(x=>x[0]);
     return{err:`'${t}' is not valid here (stack [${st.f.at(-1)}]${st.bs.length?' inside a block':''}${known?'':', unknown token'}). Valid: ${v.slice(0,60).join(' ')}${v.length>60?' …':''}`}}
    const s0=steps.length;{const wt=wtabOf(o);steps.push([wt.M,wt.W[i],wt.C[i]])}let tok=t;
    if(kind[0]=='#'){const v=kind=='#I'?nrm(BigInt(t)):pj(t);encLit(kind,v,steps);tok=kind+(kind=='#I'?String(v):fmt(v))}
@@ -42,19 +45,19 @@ function tree(ann){const root=[],st=[root];
   else st.at(-1).push({t,si:info})}
  return root}
 function ev(p,s,args){for(const nd of p){tick();
- if(nd.b){const{k,C,r}=nd.info,f=x=>{tick();const z=ev(nd.b,x,args);return z[z.length-1]};
+ if(nd.b){const{k,C,r,m}=nd.info,f=x=>{tick();const z=ev(nd.b,x,args);return z[z.length-1]};
   if(k=='first'){let x=s.pop();while(!truthy(f([x])))x=ar('+',x,1);s.push(x)}
   else if(k=='fix'){let x=s.pop();for(;;){const y=f([x]);if(key(y)==key(x))break;x=y}s.push(x)}
   else if(k=='trace'){let x=s.pop();const out=[x],seen=new Set([key(x)]);for(;;){const y=f([x]),ky=key(y);if(seen.has(ky))break;seen.add(ky);out.push(y);x=y}s.push(chk(out))}
   else if(k=='fold'||k=='folds'){let acc=s.pop();const a=A(s.pop()),out=[];for(const x of a){acc=f([acc,x]);if(k=='folds')out.push(acc)}s.push(k=='fold'?acc:chk(out))}
   else if(k=='firstn'){let x=s.pop();const n=num(s.pop()),out=[];while(out.length<n){if(truthy(f([x])))out.push(x);x=ar('+',x,1)}s.push(chk(out))}
   else if(k=='times'){let x=s.pop();const n=num(s.pop());for(let i=0;i<n;i++)x=f([x]);s.push(x)}
-  else{const a=A(s.pop());
-   if(k=='map'){const res=a.map(x=>f([x]));s.push(C=='S'&&r=='S'?res.join(''):res)}
-   else if(k=='filter')s.push(F(a.filter(x=>truthy(f([x]))),C));
-   else if(k=='sortby')s.push(F(a.map((x,i)=>[f([x]),i,x]).sort((p,q)=>cmp(p[0],q[0])||p[1]-q[1]).map(e=>e[2]),C));
-   else if(k=='find'){const x=a.find(y=>truthy(f([y])));s.push(x===undefined?zero(ELEM[C]):x)}
-   else if(k=='count')s.push(a.filter(y=>truthy(f([y]))).length);
+  else{const a=A(s.pop()),cap=m=='c'?[s.pop()]:[],g=x=>f([...cap,x]);
+   if(k=='map'){const res=a.map(x=>g(x));s.push(C=='S'&&r=='S'?chkS(res.join('')):res)}
+   else if(k=='filter')s.push(F(a.filter(x=>truthy(g(x))),C));
+   else if(k=='sortby')s.push(F(a.map((x,i)=>[g(x),i,x]).sort((p,q)=>cmp(p[0],q[0])||p[1]-q[1]).map(e=>e[2]),C));
+   else if(k=='find'){const x=a.find(y=>truthy(g(y)));s.push(x===undefined?zero(ELEM[C]):x)}
+   else if(k=='count')s.push(a.filter(y=>truthy(g(y))).length);
    else if(k=='reduce')s.push(a.length?a.slice(1).reduce((acc,x)=>f([acc,x]),a[0]):zero(ELEM[C]));
    else{let acc;s.push(F(a.map((x,i)=>i?acc=f([acc,x]):acc=x),C))}}}
  else if('lit'in nd)s.push(nd.lit);
