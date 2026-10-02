@@ -24,7 +24,7 @@ export const permalink = (page, I, O, bytes, inputs = []) => {
   return `${page}#${I}/${O}/${bytes.map(hex2).join('')}${inputs.length ? '/' + enc(inputs.join('\n')) : ''}`;
 };
 export const parseHash = hash => {
-  const m = /^#([ILSMW]{1,4})\/([ILSMW]{1,4}|\*)\/([0-9a-f]*)(?:\/(.*))?$/.exec(hash) || /^#([IL])([IL*])\.([0-9a-f]*)$/.exec(hash);
+  const m = /^#([ILSMW]{0,4})\/([ILSMW]{1,4}|\*)\/([0-9a-f]*)(?:\/(.*))?$/.exec(hash) || /^#([IL])([IL*])\.([0-9a-f]*)$/.exec(hash);
   if (!m) return null;
   let inputs = null;
   if (m[4] != null) try { inputs = decodeURIComponent(m[4]); } catch { }

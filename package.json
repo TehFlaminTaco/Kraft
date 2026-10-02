@@ -1,6 +1,6 @@
 {
   "name": "kraft",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Kraft: a golfing language designed as a compression scheme over typed programs",

@@ -7,14 +7,16 @@ const esc=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[
 const ANS={};
 const copyBar=p=>`<p class=copy><button data-copy=cgcc data-pane=${p}>Copy CGCC answer</button> <button data-copy=cmc data-pane=${p}>Copy for chat</button> <small class=cs></small></p>`;
 $('ch').innerHTML=CH.map((c,i)=>`<option value=${i}>${c.id}</option>`).join('');
-function load(i){tab(0);$('ch').value=i;const c=CH[i];$('src').value=c.src;$('sig').textContent=`${c.I} → ${c.O}`;go()}
+// per-token bit costs
+const chips=costs=>costs.map(x=>`<span class=tok>${esc(x[0])} <b>${x[1].toFixed(2)}b</b></span>`).join('');
+function load(i){tab(0);$('ch').value=i;const c=CH[i];$('src').value=c.src;$('sig').textContent=`${c.I||'∅'} → ${c.O}`;go()}
 function go(){const c=CH[$('ch').value],r=compile($('src').value,c.I,c.O);
  if(r.err){$('out').innerHTML=`<span class=err>${esc(r.err)}</span>`;return}
  const d=decode(r.bytes,c.I,c.O);let pass=0,det=[];
  for(const[i,o]of c.t){let v;try{v=runv(d,c.I,i)}catch(e){v='error'}const ok=fmt(v)==fmt(o);pass+=ok;det.push(`${fmt(i)}→${fmt(v)}${ok?'':' (want '+fmt(o)+')'}`)}
- $('out').innerHTML=r.costs.map(x=>`<span class=tok>${esc(x[0])} <b>${x[1].toFixed(2)}b</b></span>`).join('')+
+ $('out').innerHTML=chips(r.costs)+
  `<p><b style="color:var(--fg)">${r.bytes.length} bytes</b> (${r.bits.toFixed(1)} bits): <code>${r.bytes.map(b=>b.toString(16).padStart(2,'0')).join(' ')||'(empty)'}</code><br>Decoded back: <code>${esc((d||[]).map(show).join(' '))}</code><br>Tests ${pass}/${c.t.length}: <small>${esc(det.join('; '))}</small></p>`+copyBar('ch');
- ANS.ch={src:(d||[]).map(show).join(' '),bytes:r.bytes,I:c.I,O:c.O,inputs:c.t.map(([i])=>fmt(i))}}
+ ANS.ch={src:(d||[]).map(show).join(' '),bytes:r.bytes,I:c.I,O:c.O,inputs:c.I?c.t.map(([i])=>fmt(i)):[]}}
 const tab=d=>{if(!d&&!suiteDone){$('tb').innerHTML='<tr><td>Running suite…</tr>';setTimeout(suite,30)}$('pdev').hidden=!d;$('pch').hidden=d;$('tdev').className=d?'on':'';$('tch').className=d?'':'on'};$('tdev').onclick=()=>tab(1);$('tch').onclick=()=>tab(0);
 let SR=null;
 $('gs').onclick=()=>{if(SR){SR.stop=1;return}
@@ -36,16 +38,18 @@ function runLines(toks,I,lines){const want=I.length==1?(I=='I'?'an integer':'a l
  return lines.map(l=>{let v;try{v=pj(l)}catch(e){return `${esc(l)} → <span class=err>not valid JSON</span>`}
  if(!okv(v,I))return `${esc(l)} → <span class=err>expected ${want}</span>`;
  try{const st=exec(toks,I,I.length==1?[v]:v);return `${esc(l)} → <b>${esc(st.length==1?fmt(st[0]):'stack '+fmt(st))}</b>`}catch(e){return `${esc(l)} → <span class=err>runtime error</span>`}}).join('<br>')}
-function dev(fromHex){const I=$('dI').value.trim().toUpperCase(),O=$('dO').value.trim().toUpperCase();let toks,bytes,info;
- if(!/^[ILSMW]{1,4}$/.test(I)||!/^([ILSMW]{1,4}|\*)$/.test(O)){$('dout').innerHTML='<span class=err>Types must be 1-4 of I/L/S/M/W (output may also be *).</span>';return}
+// no input: run once with an empty stack
+function runNone(toks){try{const st=exec(toks,'',[]);return `→ <b>${esc(st.length==1?fmt(st[0]):'stack '+fmt(st))}</b>`}catch(e){return `<span class=err>runtime error</span>`}}
+function dev(fromHex){const I=$('dI').value.trim().toUpperCase(),O=$('dO').value.trim().toUpperCase();let toks,bytes,info,costs;
+ if(!/^[ILSMW]{0,4}$/.test(I)||!/^([ILSMW]{1,4}|\*)$/.test(O)){$('dout').innerHTML='<span class=err>Types are up to 4 of I/L/S/M/W (input may be empty for no input; output may also be *).</span>';return}
  if(fromHex){bytes=parseHex($('dhex').value);toks=decode(bytes,I,O);
   if(!toks){$('dout').innerHTML='<span class=err>These bytes never reach a valid end for these types (only possible when the tail cannot close within limits).</span>';return}
-  $('dsrc').value=toks.map(show).join(' ');info=`Decoded ${bytes.length} bytes to source above.`}
+  $('dsrc').value=toks.map(show).join(' ');info=`Decoded ${bytes.length} bytes to source above.`;const rc=compile($('dsrc').value,I,O);costs=rc.err?[]:rc.costs}
  else{const r=compile($('dsrc').value,I,O);if(r.err){$('dout').innerHTML=`<span class=err>${esc(r.err)}</span>`;return}
-  toks=r.toks;bytes=r.bytes;$('dhex').value=hexOf(bytes);info=`${bytes.length} bytes (${r.bits.toFixed(1)} bits).`}
- const lines=$('din').value.split('\n').map(x=>x.trim()).filter(x=>x);ANS.dev={src:toks.map(show).join(' '),bytes,I,O,inputs:lines};
- try{history.replaceState(null,'',permalink('',I,O,bytes,lines))}catch(e){}
- $('dout').innerHTML=`<p style="margin:0 0 6px">${info} <small>Bytecode is stored in the URL fragment, so the link is shareable.</small></p>`+(lines.length?runLines(toks,I,lines):'<small>Add inputs above to run the program.</small>')+copyBar('dev')}
+  toks=r.toks;bytes=r.bytes;costs=r.costs;$('dhex').value=hexOf(bytes);info=`${bytes.length} bytes (${r.bits.toFixed(1)} bits).`}
+ const lines=$('din').value.split('\n').map(x=>x.trim()).filter(x=>x);ANS.dev={src:toks.map(show).join(' '),bytes,I,O,inputs:I?lines:[]};
+ try{history.replaceState(null,'',permalink('',I,O,bytes,ANS.dev.inputs))}catch(e){}
+ $('dout').innerHTML=chips(costs)+`<p style="margin:6px 0">${info} <small>Bytecode is stored in the URL fragment, so the link is shareable.</small></p>`+(!I?runNone(toks):lines.length?runLines(toks,I,lines):'<small>Add inputs above to run the program.</small>')+copyBar('dev')}
 $('dgo').onclick=()=>dev(false);
 document.addEventListener('keydown',e=>{if(e.key!='Enter'||!(e.ctrlKey||e.metaKey))return;const id=e.target.id;let f=null;
  if(id=='dhex')f=()=>dev(true);else if(['dsrc','din','dI','dO'].includes(id))f=()=>dev(false);else if(id=='src')f=go;

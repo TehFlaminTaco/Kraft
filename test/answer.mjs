@@ -14,6 +14,7 @@ const link = permalink(page, 'II', 'L', [0x1a, 0xff], ['[5,9]', '"a (b)"']);
 assert.ok(!/[()\s]/.test(link.slice(page.length)), 'permalink must be safe inside a Markdown link');
 assert.deepEqual(parseHash(link.slice(page.length)), {I: 'II', O: 'L', hex: '1aff', inputs: '[5,9]\n"a (b)"'});
 assert.deepEqual(parseHash('#I/I/0e'), {I: 'I', O: 'I', hex: '0e', inputs: null});
+assert.deepEqual(parseHash('#/S/0e'), {I: '', O: 'S', hex: '0e', inputs: null});
 
 const r = compile('range sq sum', 'I', 'I'), src = 'range sq sum', l = permalink(page, 'I', 'I', r.bytes, ['3']);
 assert.equal(cgcc({src, bytes: r.bytes, link: l}), [

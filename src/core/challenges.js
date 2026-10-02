@@ -14,7 +14,7 @@ const CH=[
 {id:'Sum of divisors',I:'I',O:'I',src:'divs sum',t:[[6,12],[7,8],[1,1]]},
 {id:'Floor mean',I:'L',O:'I',src:'dup sum swap len /',t:[[[1,2,3,4],2],[[10,20],15]]},
 {id:'Reverse string',I:'S',O:'S',src:'rev',t:[['abc','cba'],['','']]},
-{id:'Hello, World!',I:'I',O:'S',src:'drop "Hello, World!"',t:[[0,'Hello, World!']]},
+{id:'Hello, World!',I:'',O:'S',src:'"Hello, World!"',t:[[[],'Hello, World!']]},
 {id:'String palindrome',I:'S',O:'I',src:'dup rev eql',t:[['abba',1],['abc',0],['',1]]},
 {id:'Count vowels',I:'S',O:'I',src:'low { "aeiou" swap has } count',t:[['Hello',2],['rhythm',0],['AEIOU',5]]},
 {id:'GCD',I:'II',O:'I',src:'gcd',t:[[[12,18],6],[[7,13],1]]},
@@ -25,7 +25,7 @@ const CH=[
 {id:'Distinct count',I:'L',O:'I',src:'uniq len',t:[[[1,2,2,3,3,3],3]]},
 {id:'Is sorted',I:'L',O:'I',src:'dup sort eql',t:[[[1,2,3],1],[[3,1],0]]},
 {id:'Number of digits',I:'I',O:'I',src:'str len',t:[[12345,5],[0,1]]},
-{id:'Squares up to 100',I:'I',O:'L',src:'drop 10 range sq',t:[[0,[1,4,9,16,25,36,49,64,81,100]]]},
+{id:'Squares up to 100',I:'',O:'L',src:'10 range sq',t:[[[],[1,4,9,16,25,36,49,64,81,100]]]},
 {id:'Pangram',I:'S',O:'I',src:'drop alpha { n low swap has } map all',t:[['The quick brown fox jumps over the lazy dog',1],['hello',0]]},
 // --- Code Golf SE sample: challenges with Jelly, Vyxal and Thunno 2 answers ---
 {id:'Primes in range (CGCC 258217)',best:4,I:'II',O:'L',src:'rng tail init { prime } filter',t:[[[11,59],[13,17,19,23,29,31,37,41,43,47,53]],[[11,3],[7,5]],[[2,2],[]],[[2,3],[]],[[2,4],[3]],[[4,2],[3]]]},
